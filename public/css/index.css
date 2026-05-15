@@ -1,5 +1,6 @@
 body {
- background-color: #003366;
+ /* background-color: #003366; */
+ background-color: #001d3b;
  /* #011a33; */
  /* font-family: courier; */
  /* font-style: normal; */
@@ -33,7 +34,8 @@ position: fixed;
     -webkit-user-select: none;
     -ms-user-select: none;
 
-    margin: 0;
-    height: 100%;
+    margin-top: -15px;
+    margin-left: -10px;
+    height: 100dvh;
     overflow: hidden
 }
