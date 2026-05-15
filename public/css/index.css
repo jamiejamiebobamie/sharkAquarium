@@ -37,5 +37,8 @@ position: fixed;
     margin-top: -15px;
     margin-left: -10px;
     height: 100dvh;
-    overflow: hidden
+    overflow: hidden;
+
+    cursor: url('/images/sharkCursor2.svg') 16 16, pointer;
+
 }

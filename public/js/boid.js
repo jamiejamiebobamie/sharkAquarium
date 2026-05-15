@@ -204,8 +204,8 @@ export default class Boid {
                 tintColor[fishFlocks.length - this.FlockRef.index] -= 115;
             }
             const [r,g,b,a] = tintColor;
-            p.tint(r, g, b, this.t[3])//p.random(100, 255));
-            p.image(this.drawFishy(), 0, 0)
+            p.tint(r, g, b, this.t[3]);
+            p.image(this.drawFishy(), 0, 0);
         }
         p.pop();
     }
