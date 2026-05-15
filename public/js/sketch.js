@@ -1,60 +1,59 @@
 import Boid from './boid.js';
 import { Flock, FlockShark } from './Flock.js';
 import { Sprite } from './Sprite.js';
+import { Ripples } from './Ripples.js';
 
+
+// IMGS - - - -IMGS
 let bloodCloud;
 var fishFlocks;
 var flockShark;
-// let velocity;
 let fish1;
 let fish2;
-// let interv;
 let shark1;
 let shark2;
+let gameOverShark;
+let sharkCursor;
 let trans;
+// IMGS - - - - IMGS
 
-let feed;
-
-// let spriteWidth = 320;  // Width of one frame
-// let spriteHeight = 385; // Height of one frame
-// let totalFrames = 9;   // Total animation steps
-// let currentFrame = 0;
-// let currMilli = 0;
-// let animSpeed = 150; // in milliseconds
-// let animDelay = 500; // in milliseconds
-// let gameOverSharkScale = 3;
-// let timeout;
-
-const NUM_FISH_FLOCKS = 5;
-const NUM_FISH = 20;
+// CONSTANTS - - - - CONSTANTS
+const NUM_FISH_FLOCKS = 4;
+const NUM_FISH = 25; // per flock
 const MAX_WINDOW_WIDTH = 4000;
-const NUM_SHARKS = 3;
+const NUM_SHARKS = 3; // per game
 const TOTAL_NUM_FISH = NUM_FISH_FLOCKS * NUM_FISH;
 const BLOOD_RED_COLOR = '#880808';
 const SEA_BLUE_BACKGROUND_COLOR = "#003366";
+// CONSTANTS - - - - CONSTANTS
 
+// GLOBAL STATE VARS - - - - GLOBAL STATE VARS
 let backgroundColor = SEA_BLUE_BACKGROUND_COLOR;
 let numFishKilled = 0;
 let isScreenClickedOnce = false;
 let isGameOver = false;
 let isRemoveSharks = false;
 let isRemoveGameOverShark = false;
-// let isDrawGameOverShark = false;
-let gameOverShark;
+let feed = false;
+let bloodClouds = [];
+const ripples = new Ripples();
+let rippleColor; // used for score text too
 let gameOverSharkSprite;
-
-let bloodClouds = []
-
+let sharkCursorSprite;
 
 
-// Define your sketch inside a wrapper function
+
 const sketch = (p) => {
 
-    // const { windowWidth, windowHeight, createCanvas, imageMode, loadImage } = p;
+    const computeRippleColor = () => {
+        const progress = numFishKilled / TOTAL_NUM_FISH;
+        rippleColor = p.lerpColor(p.color('#017efbff'), p.color('#f96969ff'), progress);
+    }
 
     const doFishDeathLogic = ({ posX, posY }) => {
         numFishKilled += 1;
         isGameOver = TOTAL_NUM_FISH == numFishKilled;
+        computeRippleColor();
         isScreenClickedOnce = true;
         backgroundColor = p.lerpColor(p.color(SEA_BLUE_BACKGROUND_COLOR), p.color(BLOOD_RED_COLOR), numFishKilled / TOTAL_NUM_FISH);
         const bc = new Sprite({
@@ -79,6 +78,7 @@ const sketch = (p) => {
         shark2 = p.loadImage('../images/shark2Resized.png');
         gameOverShark = p.loadImage('./images/final_spritesheet.png');
         bloodCloud = p.loadImage('./images/bloodCloud.png');
+        sharkCursor = p.loadImage('./images/sharkCursor_sprite_sheet.png');
     }
 
     p.setup = () => {
@@ -91,6 +91,23 @@ const sketch = (p) => {
         }
         canvas.parent('sketch-holder');
         p.imageMode(p.CENTER);
+
+        rippleColor = p.color('#017efbff');
+
+        sharkCursorSprite = new Sprite({
+            p,
+            spriteSheet: sharkCursor,
+            animScale: .15,
+            posX: p.mouseX,
+            posY: p.mouseY,
+            spriteWidth: 269,
+            spriteHeight: 290,
+            totalFrames: 9,
+            animSpeed: 75,
+            isRepeat: true,
+            isStopped: true
+        });
+
 
         gameOverSharkSprite = new Sprite({
             p,
@@ -105,20 +122,23 @@ const sketch = (p) => {
             animDelayInMillis: 500,
             cleanupFunc: () => {
                 isRemoveGameOverShark = true;
+                p.cursor(p.ARROW);
             },
             duringAnimPlayFunc: ({
                 totalFrames,
                 currentFrame
-            }) => { 
+            }) => {
                 if ((currentFrame + 5) >= totalFrames) isRemoveSharks = true;
-             }
+            }
         });
         resetGame();
     }
 
     function resetGame() {
 
-        bloodClouds = []
+        bloodClouds = [];
+        ripples.reset();
+
         backgroundColor = SEA_BLUE_BACKGROUND_COLOR;
         numFishKilled = 0;
         isScreenClickedOnce = false;
@@ -127,15 +147,19 @@ const sketch = (p) => {
         isRemoveGameOverShark = false;
         feed = false;
 
-        gameOverSharkSprite.reset()
+        gameOverSharkSprite.reset();
+        sharkCursorSprite.reset({ isStopped: true });
 
-        const spawnPoints = [[0, 0], [p.windowWidth, p.windowHeight], [0, p.windowHeight / 2], [p.windowWidth / 2, p.windowHeight / 2], [p.windowWidth / 2, 0], [0, p.windowWidth], [0, p.windowHeight], [p.windowWidth, p.windowHeight], [p.windowWidth / 1.5, p.windowHeight / 1.5]]
+        p.noCursor();
+
+        const spawnPoints = [
+            [0, 0], [p.windowWidth, p.windowHeight], [0, p.windowHeight], [p.windowWidth / 2, p.windowHeight / 2], [p.windowWidth / 4, 0], [0, p.windowWidth / 2], [0, p.windowHeight / 2], [p.windowWidth, p.windowHeight], [p.windowWidth / 1.5, p.windowHeight / 1.5]]
 
         flockShark = new FlockShark();
         for (var i = 0; i < NUM_SHARKS; i++) {
             var b = new Boid({
-                x: spawnPoints[i][0],
-                y: spawnPoints[i][1],
+                x: spawnPoints[i + 5][0],
+                y: spawnPoints[i + 5][1],
                 fish: "shark",
                 imgs: { shark1, shark2, fish1, fish2, trans },
                 createVector: p.createVector,
@@ -170,7 +194,7 @@ const sketch = (p) => {
         } else {
             p.resizeCanvas(MAX_WINDOW_WIDTH, p.windowHeight);
         }
-        
+
         gameOverSharkSprite.updateAnimPos({
             posX: p.windowWidth / 2 - 50,
             posY: p.windowHeight / 2
@@ -183,10 +207,18 @@ const sketch = (p) => {
         p.textSize(25);
 
         if (!isScreenClickedOnce) {
+            p.strokeWeight(1);
             p.fill('#6db5fc');
             p.stroke('#6db5fc');
             p.text('click and hold to eat the fish', p.windowWidth / 2 - 30, p.windowHeight / 2);
+        } else if (isScreenClickedOnce && !isRemoveGameOverShark) {
+            p.strokeWeight(1);
+            p.textSize(25);
+            p.fill(rippleColor);
+            p.stroke(rippleColor);
+            p.text(`${numFishKilled} / ${TOTAL_NUM_FISH}`, p.windowWidth - 90, 60);
         } else if (isRemoveGameOverShark) {
+            p.strokeWeight(1);
             p.textSize(25);
             p.fill('#000');
             p.stroke('#000');
@@ -200,6 +232,15 @@ const sketch = (p) => {
             gameOverSharkSprite.draw(p.millis());
         }
         if (!isRemoveSharks) flockShark.run({ isGameOver, feed, flockShark, fishFlocks, feed, p });
+
+        if (!isGameOver) {
+            if (feed && ripples.shouldUpdateRipples(p.millis())) {
+                ripples.updateRipples(p, p.millis());
+            }
+            ripples.draw(p, rippleColor, numFishKilled, TOTAL_NUM_FISH);
+            sharkCursorSprite.updateAnimPos({ posX: p.mouseX, posY: p.mouseY });
+            sharkCursorSprite.draw(p.millis());
+        }
     }
 
     p.mouseDragged = () => {
@@ -207,12 +248,14 @@ const sketch = (p) => {
             for (let i = 0; i < flockShark.boids.length; i++) {
                 flockShark.boids[i].goHere = p.createVector(p.mouseX, p.mouseY)
             }
+            console.log({ ripplesNum: ripples.getNumRipples(), isMaxRipples: ripples.isMaxRipples(), shouldUpdateRipples: ripples.shouldUpdateRipples(p.millis()) });
         }
     }
 
     p.mousePressed = () => {
         if (!isGameOver) {
             feed = true;
+            sharkCursorSprite.play();
         }
     }
     p.mouseReleased = () => {
@@ -220,8 +263,8 @@ const sketch = (p) => {
             resetGame();
         }
         feed = false;
+        sharkCursorSprite.stop();
     }
-
 };
 
 new p5(sketch);

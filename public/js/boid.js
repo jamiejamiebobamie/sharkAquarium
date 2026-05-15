@@ -136,7 +136,7 @@ export default class Boid {
         // sep.mult(this.fish == "shark" ? 4.5 : 1.5);
         // ali.mult(this.fish == "shark" ? 2.5 : 1.0);
         // coh.mult(this.fish == "shark" ? 1.0 : 1.0);
-        sep.mult(this.fish == "shark" ? 4.5 : 1.5);
+        sep.mult(this.fish == "shark" ? 4.5 : 1.7);
         ali.mult(this.fish == "shark" ? 2.5 : 1.5);
         coh.mult(this.fish == "shark" ? 1.0 : 1.5);
 
@@ -224,7 +224,7 @@ export default class Boid {
 
     separate(boids) {
         if (this.fish == "fish") {
-            var desiredseparation = 55.0; //25.0
+            var desiredseparation = 60.0; //25.0
         } else if (this.fish == "shark") {
             var desiredseparation = 500.0; //25.0
         }
