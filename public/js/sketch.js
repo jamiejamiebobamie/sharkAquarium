@@ -18,6 +18,7 @@ let trans;
 let fishScoreBoardImg;
 let seaweedImg;
 let gameSharkImg;
+let gameFishImg;
 // IMGS - - - - IMGS
 
 // CONSTANTS - - - - CONSTANTS
@@ -48,6 +49,7 @@ let rippleColor; // used for score text too
 let gameOverSharkSprite;
 let sharkCursorSprite;
 let gameSharkSprite;
+let gameFishSprite;
 let scoreBoardOpacity = 0;
 let intervalRef;
 let progress = 0;
@@ -126,12 +128,14 @@ const sketch = (p) => {
         trans = p.loadImage('../images/transparency.png');
         shark1 = p.loadImage('../images/shark1Resized.png');
         shark2 = p.loadImage('../images/shark2Resized.png');
-        gameOverShark = p.loadImage('./images/final_spritesheet.png');
-        bloodCloud = p.loadImage('./images/bloodCloud.png');
-        sharkCursor = p.loadImage('./images/sharkCursor_sprite_sheet.png');
+        gameOverShark = p.loadImage('./images/spritesheets/final_spritesheet.png');
+        bloodCloud = p.loadImage('./images/spritesheets/bloodCloud.png');
+        sharkCursor = p.loadImage('./images/spritesheets/sharkCursor_sprite_sheet.png');
         fishScoreBoardImg = p.loadImage('./images/fish_scoreboard.png');
-        seaweedImg = p.loadImage('./images/kelp_spritesheet.png');
-        gameSharkImg = p.loadImage('./images/gameshark_sprite_sheet.png');
+        seaweedImg = p.loadImage('./images/spritesheets/kelp_spritesheet.png');
+        gameSharkImg = p.loadImage('./images/spritesheets/gameshark_sprite_sheet.png');
+        gameFishImg = p.loadImage('./images/spritesheets/gamefish_sprite_sheet.png');
+
     }
 
     p.setup = () => {
@@ -145,18 +149,18 @@ const sketch = (p) => {
         rippleColor = p.color('#017efbff');
 
         const sizeGroups = [
-            {heightAdjustment: 0, scale: 1.5},
+            { heightAdjustment: 0, scale: 1.5 },
             // {heightAdjustment: 20, scale: 1},
             // {heightAdjustment: 40, scale: .8},
             // {heightAdjustment: 40, scale: .8},
-            {heightAdjustment: 20, scale: 1},
+            { heightAdjustment: 20, scale: 1 },
             // {heightAdjustment: 0, scale: 1.5},
         ];
         const seaweedHorizontalPlacement = [
             // 0, 
-            getWidth() * (1 / 16), 
+            getWidth() * (1 / 16),
             // getWidth() * (2 / 16), getWidth() * (14 / 16), 
-            getWidth() * (15 / 16), 
+            getWidth() * (15 / 16),
             // getWidth()
         ];
         Array(NUM_SEAWEED_STRANDS).fill(0).forEach((_, i) => {
@@ -170,25 +174,27 @@ const sketch = (p) => {
                 spriteHeight: 429,
                 totalFrames: 8,
                 animSpeed: 300,
-                animDelayInMillis: Math.abs(p.sin(Math.PI * i* 100)) * 100,
+                animDelayInMillis: Math.abs(p.sin(Math.PI * i * 100)) * 100,
                 isRepeat: true
             });
             seaweed.push(strand);
         });
 
-        gameSharkSprite = new Sprite({
-            p,
-            spriteSheet: gameSharkImg,
-            animScale: 1,
-            posX: getWidth() / 2,
-            posY: p.windowHeight / 2,
-            spriteWidth: 258,
-            spriteHeight: 592,
-            totalFrames: 7,
-            animSpeed: 1000, // 50 (fast) to 1000 (slow) ... maybe anim.stop() then play on interval if not "isFeeding"?
-            isRepeat: true,
-            // isStopped: true
-        });
+
+
+        // gameFishSprite = new Sprite({
+        //     p,
+        //     spriteSheet: gameFishImg,//gameSharkImg,
+        //     animScale: .2,
+        //     posX: 0,
+        //     posY: 0,
+        //     spriteWidth: 258,
+        //     spriteHeight: 592,
+        //     totalFrames: 7,
+        //     animSpeed: 200, // 50 (fast) to 1000 (slow) ... maybe anim.stop() then play on interval if not "isFeeding"?
+        //     isRepeat: true,
+        //     // isStopped: true
+        // });
 
         sharkCursorSprite = new Sprite({
             p,
@@ -251,8 +257,21 @@ const sketch = (p) => {
             [0, 0], [getWidth(), p.windowHeight], [0, p.windowHeight], [getWidth() / 2, p.windowHeight / 2], [getWidth() / 4, 0], [0, getWidth() / 2], [0, p.windowHeight / 2], [getWidth(), p.windowHeight], [getWidth() / 1.5, p.windowHeight / 1.5]
         ]
 
-        flockShark = new SharkFlock();
+        flockShark = new SharkFlock(p);
         for (var i = 0; i < NUM_SHARKS; i++) {
+            gameSharkSprite = new Sprite({
+                p,
+                spriteSheet: gameSharkImg,
+                animScale: .5,
+                posX: 0,
+                posY: 0,
+                spriteWidth: 258,
+                spriteHeight: 592,
+                totalFrames: 7,
+                animSpeed: 200, // 50 (fast) to 1000 (slow) ... maybe anim.stop() then play on interval if not "isFeeding"?
+                isRepeat: true,
+                // isStopped: true
+            });
             var b = new SharkBoid({
                 p,
                 getWidth,
@@ -260,16 +279,18 @@ const sketch = (p) => {
                 y: spawnPoints[i + 5][1],
                 FlockRef: flockShark,
                 imgs: { shark1, shark2 },
+                gameSharkImg,
                 index: i,
-                maxSpeed: p.random(7, 8),
+                maxSpeed: p.random(11, 14),
                 getAreSharksFeeding,
-                getIsGameOver
+                getIsGameOver,
+                gameSharkSprite
             });
             flockShark.addBoid(b);
         }
 
         fishFlocks = Array(NUM_FISH_FLOCKS).fill(0).map((_, j) => {
-            const flock = new FishFlock(j);
+            const flock = new FishFlock(p, j);
             flock.sharks = flockShark;
             for (var i = 0; i < NUM_FISH; i++) {
                 var b = new FishBoid(
@@ -280,6 +301,7 @@ const sketch = (p) => {
                         y: spawnPoints[j][1],
                         FlockRef: flock,
                         imgs: { fish1, fish2, trans },
+                        // gameFishSprite,
                         index: i,
                         maxSpeed: p.random(8, 9),
                         doDeathLogic: doFishDeathLogic,
@@ -391,12 +413,14 @@ const sketch = (p) => {
 
     const showResetText = () => {
         p.strokeWeight(1);
-        p.textSize(40);
-        p.fill('#000');
-        p.stroke('#000');
-        p.text('thanks for playing!', getWidth() / 2 - 20, p.windowHeight / 2 - 20);
-        p.textSize(21);
-        p.text('(click to reset)', getWidth() / 2 - 30, p.windowHeight / 2 + 20);
+        p.textSize(75);
+        // p.fill('#000');
+        // p.stroke('#000');
+        p.fill('#3f0000ff');
+        p.stroke('#3f0000ff');
+        p.text('thanks for playing!', getWidth() / 2 - 20, p.windowHeight / 2 - 40);
+        p.textSize(30);
+        p.text('(click to reset)', getWidth() / 2 - 30, p.windowHeight / 2 + 25);
     }
 
     const drawBloodClouds = () => {

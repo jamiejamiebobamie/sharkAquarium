@@ -90,4 +90,3 @@ export class Ripple {
         p.ellipse(this.position.x, this.position.y, this.diameter);
     }
 }
-

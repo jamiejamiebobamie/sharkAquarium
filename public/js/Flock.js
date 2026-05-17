@@ -1,5 +1,6 @@
 export class Flock {
-    constructor() {
+    constructor(p) {
+        this.p = p;
         this.boids = [];
     }
 
@@ -15,19 +16,24 @@ export class Flock {
 }
 
 export class SharkFlock extends Flock {
-    constructor() {
-        super();
+    constructor(p) {
+        super(p);
         this.lastCirclePosUpdate = 0;
         this.intervalTimeout = undefined;
-        this.circlePosUpdateInterval = 100;
+        this.circlePosUpdateInterval = 100;//200; // 100
+        this.lastMilli = 0;
+
     }
 
     getLastCirclePosUpdate(){
-        return this.lastCirclePosUpdate;
+        // const diff = this.p.millis() - this.lastMilli;
+        // this.lastMilli = diff;
+        // this.circlePosUpdateInterval = diff;
+        return  this.lastCirclePosUpdate;
     }
 
     startSharkCirclePositionsInterval() {
-        this.intervalTimeout = setInterval(() => { this.lastCirclePosUpdate += 30; }, this.circlePosUpdateInterval)
+        this.intervalTimeout = setInterval(() => { this.lastCirclePosUpdate += 45; }, this.circlePosUpdateInterval) // 30
     }
 
     clearUpdateSharkCirclePositionsInterval() {
@@ -37,8 +43,8 @@ export class SharkFlock extends Flock {
 }
 
 export class FishFlock extends Flock {
-    constructor(index) {
-        super();
+    constructor(p, index) {
+        super(p);
         this.sharks = null;
         this.index = index; // for fish group color
     }
