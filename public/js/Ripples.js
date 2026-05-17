@@ -39,12 +39,12 @@ export class Ripples {
         }
     }
 
-    draw(p, rippleColor, numFishKilled, TOTAL_NUM_FISH) {
+    draw(p, rippleColor, numFishKilled, TOTAL_NUM_FISH, isSharksInKillZone) {
         this.ripples.forEach(ripple => {
             ripple.updateRipples(p.millis());
             const progress = numFishKilled / TOTAL_NUM_FISH;
 
-            ripple.draw(p, rippleColor, progress);
+            ripple.draw(p, rippleColor, progress, isSharksInKillZone);
         });
     }
 }
@@ -67,29 +67,27 @@ export class Ripple {
     resetRipple(position) {
         this.position = position;
         this.lastUpdateTimeMillis = 0;
-        this.diameter = 5;
-        this.opacity = .25;
+        this.diameter = 7;
+        this.opacity = .15;
         this.isDone = false;
         this.random = Math.random() * 3;
     }
 
     updateRipples(gameTimeMillis) {
-        const diff = gameTimeMillis - this.lastUpdateTimeMillis;
-        // if (!(diff > this.updateIntervalMillis)) {
         this.lastUpdateTimeMillis = gameTimeMillis;
         this.opacity -= this.opacityUpdateAmt;
         if (this.opacity < 0) { this.isDone = true; }
         this.diameter += (this.diameterUpdateAmt + this.random);
-        // }
     }
 
-    draw(p, rippleColor, progress) {
+    draw(p, rippleColor, progress, isSharksInKillZone) {
         if (this.isDone) return;
-        const c = p.color(rippleColor.toString());
+        const c = p.lerpColor(p.color(rippleColor.toString()), p.color('#ff0000ff'), isSharksInKillZone ? 1 : 0);
         c.setAlpha(this.opacity * 255)
         p.stroke(c);
-        // p.strokeWeight(progress * (3 - 1) + 1);
+        p.strokeWeight(isSharksInKillZone ? 4 : 3);
         p.noFill();
         p.ellipse(this.position.x, this.position.y, this.diameter);
     }
 }
+

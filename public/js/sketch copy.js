@@ -1,5 +1,5 @@
-import { SharkBoid, FishBoid } from './boid.js';
-import { SharkFlock, FishFlock } from './Flock.js';
+import { SharkBoid, FishBoid, Boid } from './boid.js';
+import { Flock } from './Flock.js';
 import { Sprite } from './Sprite.js';
 import { Ripples } from './Ripples.js';
 import { Scoreboard } from './Scoreboard.js'
@@ -28,7 +28,9 @@ const NUM_SHARKS = 3; // per game
 const TOTAL_NUM_FISH = NUM_FISH_FLOCKS * NUM_FISH;
 const BLOOD_RED_COLOR = '#880808';
 const SEA_BLUE_BACKGROUND_COLOR = "#003366";
-const NUM_SEAWEED_STRANDS = 2;
+const GOLD_COLOR = '#FFD700';
+const DARK_GOLD_COLOR = '#42380299';
+const NUM_SEAWEED_STRANDS = 6;
 // CONSTANTS - - - - CONSTANTS
 
 // GLOBAL STATE VARS - - - - GLOBAL STATE VARS
@@ -38,7 +40,7 @@ let isScreenClickedOnce = false;
 let isGameOver = false;
 let isRemoveSharks = false;
 let isRemoveGameOverShark = false;
-let isFeeding = false;
+let feed = false;
 let isReset = false;
 let bloodClouds = [];
 let seaweed = [];
@@ -51,13 +53,12 @@ let gameSharkSprite;
 let scoreBoardOpacity = 0;
 let intervalRef;
 let progress = 0;
+let lastCirclePosUpdate = 0;
+let lastCirclePosUpdateInterval = 100;
+let intervalTimeout;
 let fishRespawnTimeout = [];
 
 const sketch = (p) => {
-
-    const getAreSharksFeeding = () => isFeeding;
-
-    const getIsGameOver = () => isGameOver;
 
     const computeRippleColor = progress => {
         rippleColor = p.lerpColor(p.color('#017efbff'), p.color('#f96969ff'), progress);
@@ -84,7 +85,7 @@ const sketch = (p) => {
         numFishKilled += 1;
         isGameOver = TOTAL_NUM_FISH == numFishKilled;
 
-        if (isGameOver) isFeeding = false;
+        if (isGameOver) feed = false;
         else {
             fishRespawnTimeout.forEach(timeout => clearTimeout(timeout));
             fishRespawnTimeout = [];
@@ -129,9 +130,9 @@ const sketch = (p) => {
         gameOverShark = p.loadImage('./images/final_spritesheet.png');
         bloodCloud = p.loadImage('./images/bloodCloud.png');
         sharkCursor = p.loadImage('./images/sharkCursor_sprite_sheet.png');
-        fishScoreBoardImg = p.loadImage('./images/fish_scoreboard.png');
+        fishScoreBoardImg = p.loadImage('./images/fish_score2.png');
         seaweedImg = p.loadImage('./images/kelp_spritesheet.png');
-        gameSharkImg = p.loadImage('./images/gameshark_sprite_sheet.png');
+        gameSharkImg = p.loadImage('./images/gameshark_sprite_sheet2.png');
     }
 
     p.setup = () => {
@@ -144,37 +145,31 @@ const sketch = (p) => {
 
         rippleColor = p.color('#017efbff');
 
-        const sizeGroups = [
-            {heightAdjustment: 0, scale: 1.5},
-            // {heightAdjustment: 20, scale: 1},
-            // {heightAdjustment: 40, scale: .8},
-            // {heightAdjustment: 40, scale: .8},
-            {heightAdjustment: 20, scale: 1},
-            // {heightAdjustment: 0, scale: 1.5},
-        ];
-        const seaweedHorizontalPlacement = [
-            // 0, 
-            getWidth() * (1 / 16), 
-            // getWidth() * (2 / 16), getWidth() * (14 / 16), 
-            getWidth() * (15 / 16), 
-            // getWidth()
-        ];
-        Array(NUM_SEAWEED_STRANDS).fill(0).forEach((_, i) => {
-            const strand = new Sprite({
-                p,
-                spriteSheet: seaweedImg,
-                animScale: sizeGroups[i].scale,
-                posX: seaweedHorizontalPlacement[i],
-                posY: p.windowHeight - 180 + sizeGroups[i].heightAdjustment,
-                spriteWidth: 111,
-                spriteHeight: 429,
-                totalFrames: 8,
-                animSpeed: 300,
-                animDelayInMillis: Math.abs(p.sin(Math.PI * i* 100)) * 100,
-                isRepeat: true
-            });
-            seaweed.push(strand);
-        });
+        // const sizeGroups = [
+        //     {heightAdjustment: 0, scale: 1.5},
+        //     {heightAdjustment: 20, scale: 1},
+        //     {heightAdjustment: 40, scale: .8},
+        //     {heightAdjustment: 40, scale: .8},
+        //     {heightAdjustment: 20, scale: 1},
+        //     {heightAdjustment: 0, scale: 1.5},
+        // ];
+        // const seaweedHorizontalPlacement = [0, getWidth() * (1 / 16), getWidth() * (2 / 16), getWidth() * (14 / 16), getWidth() * (15 / 16), getWidth()];
+        // Array(NUM_SEAWEED_STRANDS).fill(0).forEach((_, i) => {
+        //     const strand = new Sprite({
+        //         p,
+        //         spriteSheet: seaweedImg,
+        //         animScale: sizeGroups[i].scale,
+        //         posX: seaweedHorizontalPlacement[i],
+        //         posY: p.windowHeight - 180 + sizeGroups[i].heightAdjustment,
+        //         spriteWidth: 111,
+        //         spriteHeight: 429,
+        //         totalFrames: 8,
+        //         animSpeed: 300,
+        //         animDelayInMillis: Math.abs(p.sin(Math.PI * i)) * 1000,
+        //         isRepeat: true
+        //     });
+        //     seaweed.push(strand);
+        // });
 
         gameSharkSprite = new Sprite({
             p,
@@ -185,7 +180,7 @@ const sketch = (p) => {
             spriteWidth: 258,
             spriteHeight: 592,
             totalFrames: 7,
-            animSpeed: 1000, // 50 (fast) to 1000 (slow) ... maybe anim.stop() then play on interval if not "isFeeding"?
+            animSpeed: 1000, // 50 (fast) to 1000 (slow) ... maybe anim.stop() then play on interval if not "feed"-ing?
             isRepeat: true,
             // isStopped: true
         });
@@ -240,7 +235,7 @@ const sketch = (p) => {
         isGameOver = false;
         isRemoveSharks = false;
         isRemoveGameOverShark = false;
-        isFeeding = false;
+        feed = false;
 
         gameOverSharkSprite.reset();
         sharkCursorSprite.reset({ isStopped: true });
@@ -251,41 +246,38 @@ const sketch = (p) => {
             [0, 0], [getWidth(), p.windowHeight], [0, p.windowHeight], [getWidth() / 2, p.windowHeight / 2], [getWidth() / 4, 0], [0, getWidth() / 2], [0, p.windowHeight / 2], [getWidth(), p.windowHeight], [getWidth() / 1.5, p.windowHeight / 1.5]
         ]
 
-        flockShark = new SharkFlock();
+        flockShark = new Flock();
         for (var i = 0; i < NUM_SHARKS; i++) {
-            var b = new SharkBoid({
-                p,
-                getWidth,
+            var b = new Boid({
                 x: spawnPoints[i + 5][0],
                 y: spawnPoints[i + 5][1],
-                FlockRef: flockShark,
-                imgs: { shark1, shark2 },
+                fish: "shark",
+                imgs: { shark1, shark2, fish1, fish2, trans },
+                createVector: p.createVector,
+                random: p.random,
                 index: i,
-                maxSpeed: p.random(7, 8),
-                getAreSharksFeeding,
-                getIsGameOver
+                p,
+                getWidth
             });
             flockShark.addBoid(b);
         }
 
         fishFlocks = Array(NUM_FISH_FLOCKS).fill(0).map((_, j) => {
-            const flock = new FishFlock(j);
+            const flock = new Flock(j, doRespawnFishLogic);
             flock.sharks = flockShark;
             for (var i = 0; i < NUM_FISH; i++) {
-                var b = new FishBoid(
+                var b = new Boid(
                     {
-                        p,
-                        getWidth,
                         x: spawnPoints[j][0],
                         y: spawnPoints[j][1],
+                        fish: "fish",
                         FlockRef: flock,
-                        imgs: { fish1, fish2, trans },
+                        imgs: { shark1, shark2, fish1, fish2, trans },
+                        createVector: p.createVector,
+                        random: p.random,
                         index: i,
-                        maxSpeed: p.random(8, 9),
-                        doDeathLogic: doFishDeathLogic,
-                        flockShark,
-                        getAreSharksFeeding,
-                        getIsGameOver
+                        p,
+                        getWidth
                     });
                 flock.addBoid(b);
             }
@@ -346,24 +338,24 @@ const sketch = (p) => {
 
         bloodClouds.forEach(bc => bc.draw(p.millis()));
 
-        fishFlocks.forEach(fishFlock => fishFlock.run());
-
-        if (isGameOver && !isRemoveGameOverShark)
+        fishFlocks.forEach(fishFlock => fishFlock.run({ lastCirclePosUpdate, progress, isGameOver, feed, doDeathLogic: doFishDeathLogic, flockShark, fishFlocks, p }));
+        if (isGameOver && !isRemoveGameOverShark) {
             gameOverSharkSprite.draw(p.millis());
+        }
+        if (!isRemoveSharks) flockShark.run({ progress, lastCirclePosUpdate, isGameOver, feed, flockShark, fishFlocks, p });
 
-        if (!isRemoveSharks) flockShark.run();
+        seaweed.forEach(strand => strand.draw(p.millis()));
 
-        // seaweed.forEach(strand => strand.draw(p.millis()));
 
         // const update = gameSharkSprite.animSpeed - (flockShark.boids[0].velocity.mag() / flockShark.boids[0].maxSpeed) * gameSharkSprite.animSpeed / 2
         // gameSharkSprite.updateAnimSpeed(update); 
-        // gameSharkSprite.draw(p.millis());
+        gameSharkSprite.draw(p.millis());
 
         if (!isRemoveGameOverShark)
             fishScoreBoard.display({ isGameOver, scoreBoardOpacity, getWidth, numFishKilled, TOTAL_NUM_FISH });
 
         if (!isGameOver) {
-            if (isFeeding && ripples.shouldUpdateRipples(p.millis())) {
+            if (feed && ripples.shouldUpdateRipples(p.millis())) {
                 ripples.updateRipples(p, p.millis(),);
             }
             const isSharksInKillZone = isGetSharksInKillZone(flockShark);
@@ -413,37 +405,34 @@ const sketch = (p) => {
     }
 
     const goHere = (mouseX, mouseY) => {
-        if (isFeeding) {
+        if (feed) {
             for (let i = 0; i < flockShark.boids.length; i++) {
                 flockShark.boids[i].goHere = p.createVector(mouseX, mouseY)
             }
         }
     }
     p.mouseDragged = () => {
-        if (!isGameOver) {
-            goHere(p.mouseX, p.mouseY);
-        }
+        goHere(p.mouseX, p.mouseY);
     }
 
     p.mousePressed = () => {
-        if (isGameOver && isRemoveGameOverShark && isRemoveSharks && !isReset) {
-            isReset = true;
-        }
         if (!isGameOver) {
-            isFeeding = true;
+            feed = true;
+            intervalTimeout = setInterval(() => { lastCirclePosUpdate += 30; }, lastCirclePosUpdateInterval)
             sharkCursorSprite.play();
             goHere(p.mouseX, p.mouseY);
-            flockShark.startSharkCirclePositionsInterval();
+        }
+        if (isGameOver && isRemoveGameOverShark && isRemoveSharks && !isReset) {
+            isReset = true;
         }
     }
     p.mouseReleased = () => {
         if (isGameOver && isRemoveGameOverShark && isRemoveSharks && isReset) {
             resetGame();
         }
-        isFeeding = false;
+        feed = false;
         sharkCursorSprite.stop();
-        flockShark.clearUpdateSharkCirclePositionsInterval();
-
+        clearInterval(intervalTimeout);
     }
 };
 

@@ -39,6 +39,6 @@ position: fixed;
     height: 100dvh;
     overflow: hidden;
 
-    cursor: url('/images/sharkCursor2.svg') 16 16, pointer;
+    cursor: url('/images/sharkCursor.svg') 16 16, pointer;
 
 }

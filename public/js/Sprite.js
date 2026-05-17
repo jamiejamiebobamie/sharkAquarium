@@ -1,5 +1,5 @@
 export class Sprite {
-    constructor({ spriteSheet = undefined, isStopped=false, animScale = 1, posX = 0, posY = 0, spriteWidth = 0, spriteHeight = 0, totalFrames = 0, animSpeed = 200, animDelayInMillis = 0, isRepeat = false, cleanupFunc = () => { }, duringAnimPlayFunc = () => { }, p }) {
+    constructor({ spriteSheet = undefined, rotation = 0, isStopped = false, animScale = 1, posX = 0, posY = 0, spriteWidth = 0, spriteHeight = 0, totalFrames = 0, animSpeed = 200, animDelayInMillis = 0, isRepeat = false, cleanupFunc = () => { }, duringAnimPlayFunc = () => { }, p }) {
         this.spriteSheet = spriteSheet; // p5.js image object
         this.spriteWidth = spriteWidth;
         this.spriteHeight = spriteHeight;
@@ -17,6 +17,7 @@ export class Sprite {
         this.duringAnimPlayFunc = duringAnimPlayFunc;
         this.p = p;
         this.isStopped = isStopped;
+        this.rotation = rotation;
     }
 
     reset(overwrites = {}) {
@@ -32,9 +33,17 @@ export class Sprite {
         return this.currentFrame;
     }
 
+    updateAnimSpeed(update) {
+        this.animSpeed = update;
+    }
+
     updateAnimPos({ posX, posY }) {
         this.posX = posX;
         this.posY = posY;
+    }
+
+    updateAnimScale(animScale) {
+        this.animScale = animScale;
     }
 
     stop() {
@@ -51,6 +60,11 @@ export class Sprite {
         return !this.isStopped;
     }
 
+    repeat(currMilli) {
+        this.animStartTimeMillis = currMilli;
+        this.currentFrame = 0;
+    }
+
     draw(currMilli) {
         if (!this.isAnimPlaying) {
             this.animStartTimeMillis = currMilli + this.animDelay;
@@ -62,22 +76,31 @@ export class Sprite {
             const sx = this.currentFrame * this.spriteWidth;
             const sy = 0; // Row 0 on your sprite sheet
 
+            this.p.push();
+            this.p.translate(this.posX, this.posY);
+            this.p.rotate(this.rotation);
             // Draw the cropped frame onto the canvas
-            this.p.image(this.spriteSheet, this.posX, this.posY, this.spriteWidth * this.animScale, this.spriteHeight * this.animScale, sx, sy, this.spriteWidth, this.spriteHeight);
+            this.p.image(this.spriteSheet, 0, 0, this.spriteWidth * this.animScale, this.spriteHeight * this.animScale, sx, sy, this.spriteWidth, this.spriteHeight);
+            this.p.pop();
 
             if (!this.isStopped) {
-                const isAnimOver = this.currentFrame + 1 >= this.totalFrames;
                 const isDoNextFrame = (currMilli - this.animStartTimeMillis) > ((this.currentFrame + 1) * this.animSpeed);
-
-                if (isAnimOver && !this.isRepeat) this.cleanupFunc();
-                else if (isDoNextFrame) {
+                if (isDoNextFrame) {
                     this.duringAnimPlayFunc({
                         totalFrames: this.totalFrames,
                         currentFrame: this.currentFrame,
                         currMilli
                     });
-                    // advance to next frame
-                    this.currentFrame = (this.currentFrame + 1) % this.totalFrames;
+
+                    const isAnimOver = this.currentFrame + 1 >= this.totalFrames;
+                    if (isAnimOver && !this.isRepeat) {
+                        this.cleanupFunc();
+                        return;
+                    } else if (isAnimOver && this.isRepeat) {
+                        this.repeat(currMilli);
+                    } else {
+                        this.currentFrame = (this.currentFrame + 1) % (this.totalFrames + 1);
+                    }
                 }
             }
         }
